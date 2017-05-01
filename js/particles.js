@@ -226,7 +226,6 @@ var pJS = function(tag_id, params){
 
   };
 
-
   pJS.fn.canvasPaint = function(){
     pJS.canvas.ctx.fillRect(0, 0, pJS.canvas.w, pJS.canvas.h);
   };
@@ -244,7 +243,7 @@ var pJS = function(tag_id, params){
     this.radius = (pJS.particles.size.random ? Math.random() : 1) * pJS.particles.size.value;
     if(pJS.particles.size.anim.enable){
       this.size_status = false;
-      this.vs = pJS.particles.size.anim.speed / 100;
+      this.vs = pJS.particles.size.anim.speed;
       if(!pJS.particles.size.anim.sync){
         this.vs = this.vs * Math.random();
       }
@@ -363,8 +362,6 @@ var pJS = function(tag_id, params){
     this.vx_i = this.vx;
     this.vy_i = this.vy;
 
-    
-
     /* if shape is image */
 
     var shape_type = pJS.particles.shape.type;
@@ -374,7 +371,19 @@ var pJS = function(tag_id, params){
         this.shape = shape_selected;
       }
     }else{
-      this.shape = shape_type;
+      if(this.x > pJS.canvas.el.width*0.45 && this.x < pJS.canvas.el.width*0.90 && this.y < pJS.canvas.el.height * 0.3 ||
+         this.x > pJS.canvas.el.width*0.25 && this.x < pJS.canvas.el.width*0.75 && this.y > pJS.canvas.el.height * 0.3 && this.y < pJS.canvas.el.height * 0.6 ||
+         this.x > pJS.canvas.el.width*0.15 && this.x < pJS.canvas.el.width*0.60 && this.y > pJS.canvas.el.height * 0.6) {
+        if(Math.random()<0.5){
+            this.shape = 'circle';
+
+            this.color.rgb = {r: 255, g: 255, b:255};
+        } else {
+            this.shape = shape_type;
+        }
+      } else {
+            this.shape = shape_type;
+      }
     }
 
     if(this.shape == 'image'){
@@ -391,9 +400,6 @@ var pJS = function(tag_id, params){
         }
       }
     }
-
-    
-
   };
 
 
@@ -412,7 +418,7 @@ var pJS = function(tag_id, params){
     }else{
       var opacity = p.opacity;
     }
-
+ 
     if(p.color.rgb){
       var color_value = 'rgba('+p.color.rgb.r+','+p.color.rgb.g+','+p.color.rgb.b+','+opacity+')';
     }else{
@@ -487,19 +493,29 @@ var pJS = function(tag_id, params){
     pJS.canvas.ctx.closePath();
 
     if(pJS.particles.shape.stroke.width > 0){
-      pJS.canvas.ctx.strokeStyle = pJS.particles.shape.stroke.color;
+      pJS.canvas.ctx.strokeStyle = color_value;
       pJS.canvas.ctx.lineWidth = pJS.particles.shape.stroke.width;
       pJS.canvas.ctx.stroke();
     }
     
-    pJS.canvas.ctx.fill();
+    if(p.shape=='edge'){
+        pJS.canvas.ctx.fill();
+    }
     
   };
 
 
   pJS.fn.particlesCreate = function(){
-    for(var i = 0; i < pJS.particles.number.value; i++) {
-      pJS.particles.array.push(new pJS.fn.particle(pJS.particles.color, pJS.particles.opacity.value));
+    var w = pJS.particles.size.value*5;
+    var nx = Math.floor(pJS.canvas.el.width/w);
+    var ny = Math.floor(pJS.canvas.el.height/w);
+    var masternodes = 0;
+    for(var j = 0; j < ny; j++) {
+      for(var i = 0; i < nx; i++) {
+        var p = new pJS.fn.particle(pJS.particles.color, pJS.particles.opacity.value, {'x':i*w*2+w/2,'y':j*w*2+w/2})
+        pJS.particles.array.push(p);
+        pJS.particles.matrix[i][j]=p;
+      }
     }
   };
 
@@ -509,6 +525,7 @@ var pJS = function(tag_id, params){
 
       /* the particle */
       var p = pJS.particles.array[i];
+      if(p.shape=='edge' || p.shape === 'undefined') continue;
 
       // var d = ( dx = pJS.interactivity.mouse.click_pos_x - p.x ) * dx + ( dy = pJS.interactivity.mouse.click_pos_y - p.y ) * dy;
       // var f = -BANG_SIZE / d;
@@ -540,7 +557,7 @@ var pJS = function(tag_id, params){
       /* change size */
       if(pJS.particles.size.anim.enable){
         if(p.size_status == true){
-          if(p.radius >= pJS.particles.size.value) p.size_status = false;
+          if(p.radius >= pJS.particles.size.value*2) p.size_status = false;
           p.radius += p.vs;
         }else{
           if(p.radius <= pJS.particles.size.anim.size_min) p.size_status = true;
@@ -608,27 +625,127 @@ var pJS = function(tag_id, params){
 
       /* interaction auto between particles */
       if(pJS.particles.line_linked.enable || pJS.particles.move.attract.enable){
-        for(var j = i + 1; j < pJS.particles.array.length; j++){
-          var p2 = pJS.particles.array[j];
+
+        var nx = Math.floor(pJS.canvas.el.width/(pJS.particles.size.value*5));
+
+        if(pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)].shape == 'circle'){
+         pJS.fn.interact.linkParticles(p,pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)]); 
+        }
+
+        if(pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape == 'circle'){
+         pJS.fn.interact.linkParticles(p,pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]); 
+        }
+
+        if(pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1].shape == 'circle'){
+         pJS.fn.interact.linkParticles(p,pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1]); 
+        }
+
+        if(i>10 && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1].shape == 'circle' &&
+          ! (pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape == 'circle')
+          ){
+         pJS.fn.interact.linkParticles(p,pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1]); 
+        }
+
+        if(  pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)+1].shape == 'circle' &&
+          ! (pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx+1)][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx+1)][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape   == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape   == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+3][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)+3][Math.floor(i/nx)].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)-1] && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)-1].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape   == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+3]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+3].shape   == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)+2] && pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)+2].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+2] && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+2].shape == 'circle')
+          ){
+         pJS.fn.interact.linkParticles(p,pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)+1]); 
+        }
+
+        if(  pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+2] && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+2].shape == 'circle' &&
+          ! (pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx+1)][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+2]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+2].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx+1)][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)].shape   == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+2]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+2].shape   == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+2]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+2].shape   == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)-1] && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)-1].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape   == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+2] && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+2].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape   == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)+2][Math.floor(i/nx)+1].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+2]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+2].shape   == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)].shape   == 'circle' && 
+             pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+1].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+3]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+3].shape   == 'circle')  
+          ){
+         pJS.fn.interact.linkParticles(p,pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)+2]); 
+        }
+
+        if(  pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+2] && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+2].shape == 'circle' &&
+          ! (pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx-1)][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+2]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+2].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx-1)][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)].shape == 'circle')){
+         pJS.fn.interact.linkParticles(p,pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+2]); 
+        }
+
+        if(  pJS.particles.matrix[(i%nx)-2][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)-2][Math.floor(i/nx)+1].shape == 'circle' &&
+          ! (pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)-2][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)-2][Math.floor(i/nx)].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)-2][Math.floor(i/nx)+2] && pJS.particles.matrix[(i%nx)-2][Math.floor(i/nx)+2].shape == 'circle') 
+          ){
+         pJS.fn.interact.linkParticles(p,pJS.particles.matrix[(i%nx)-2][Math.floor(i/nx)+1]); 
+        }
+
+
+//        for(var j = i + 1; j < pJS.particles.array.length; j++){
+//          var p2 = pJS.particles.array[j];
+//          if(p2.shape=='edge') continue;
 
           /* link particles */
-          if(pJS.particles.line_linked.enable){
-            pJS.fn.interact.linkParticles(p,p2);
-          }
+//          if(pJS.particles.line_linked.enable){
+//            pJS.fn.interact.linkParticles(p,p2);
+//          }
 
           /* attract particles */
-          if(pJS.particles.move.attract.enable){
-            pJS.fn.interact.attractParticles(p,p2);
-          }
+//          if(pJS.particles.move.attract.enable){
+//            pJS.fn.interact.attractParticles(p,p2);
+//          }
 
           /* bounce particles */
-          if(pJS.particles.move.bounce){
-            pJS.fn.interact.bounceParticles(p,p2);
-          }
+//          if(pJS.particles.move.bounce){
+//            pJS.fn.interact.bounceParticles(p,p2);
+//          }
 
-        }
       }
-
+      
 
     }
 
@@ -652,6 +769,14 @@ var pJS = function(tag_id, params){
 
   pJS.fn.particlesEmpty = function(){
     pJS.particles.array = [];
+ 
+    var nx = Math.floor(pJS.canvas.el.width/(pJS.particles.size.value*5));
+    var ny = Math.floor(pJS.canvas.el.height/(pJS.particles.size.value*5));
+
+    pJS.particles.matrix = new Array(nx);
+    for (var i = 0; i < nx; i++) {
+      pJS.particles.matrix[i] = new Array(ny);
+    }
   };
 
   pJS.fn.particlesRefresh = function(){
@@ -680,22 +805,28 @@ var pJS = function(tag_id, params){
         dist = Math.sqrt(dx*dx + dy*dy);
 
     /* draw a line between p1 and p2 if the distance between them is under the config distance */
-    if(dist <= pJS.particles.line_linked.distance){
+    if(dist <= pJS.particles.line_linked.distance && p1.y>50 &&p2.y>50){
 
-      var opacity_line = pJS.particles.line_linked.opacity - (dist / (1/pJS.particles.line_linked.opacity)) / pJS.particles.line_linked.distance;
+      var opacity_line = pJS.particles.line_linked.opacity //- (dist / (1/pJS.particles.line_linked.opacity)) / pJS.particles.line_linked.distance;
 
       if(opacity_line > 0){        
         
         /* style */
-        var color_line = pJS.particles.line_linked.color_rgb_line;
+
+        var color_line = hexToRgb(pJS.particles.line_linked.color);
         pJS.canvas.ctx.strokeStyle = 'rgba('+color_line.r+','+color_line.g+','+color_line.b+','+opacity_line+')';
         pJS.canvas.ctx.lineWidth = pJS.particles.line_linked.width;
         //pJS.canvas.ctx.lineCap = 'round'; /* performance issue */
         
         /* path */
         pJS.canvas.ctx.beginPath();
-        pJS.canvas.ctx.moveTo(p1.x, p1.y);
-        pJS.canvas.ctx.lineTo(p2.x, p2.y);
+        var theta = Math.abs(Math.atan2((p2.y-p1.y),(p2.x-p1.x))),
+            x1 = p1.x + p1.radius*Math.cos(theta),
+            y1 = p1.y + p1.radius*Math.sin(theta),
+            x2 = p2.x - p2.radius*Math.sin(Math.PI/2 - theta),
+            y2 = p2.y - p2.radius*Math.cos(Math.PI/2 - theta) 
+        pJS.canvas.ctx.moveTo(x1, y1);
+        pJS.canvas.ctx.lineTo(x2, y2);
         pJS.canvas.ctx.stroke();
         pJS.canvas.ctx.closePath();
 
@@ -1055,6 +1186,28 @@ var pJS = function(tag_id, params){
 
   };
 
+  pJS.fn.modes.flipNodes = function(nb, pos){
+
+    for(var i = 0; i < nb; i++){
+      index = Math.floor(Math.random() * pJS.particles.array.length)
+
+      if(pJS.particles.array[index].x > pJS.canvas.el.width*0.45 && pJS.particles.array[index].x < pJS.canvas.el.width*0.90 && pJS.particles.array[index].y < pJS.canvas.el.height * 0.3 ||
+         pJS.particles.array[index].x > pJS.canvas.el.width*0.25 && pJS.particles.array[index].x < pJS.canvas.el.width*0.75 && pJS.particles.array[index].y > pJS.canvas.el.height * 0.3 && pJS.particles.array[index].y < pJS.canvas.el.height * 0.6 ||
+         pJS.particles.array[index].x > pJS.canvas.el.width*0.15 && pJS.particles.array[index].x < pJS.canvas.el.width*0.60 && pJS.particles.array[index].y > pJS.canvas.el.height * 0.6) {
+        pJS.particles.array[index].shape = 'circle';
+      }
+
+      index = Math.floor(Math.random() * pJS.particles.array.length)
+
+      if(pJS.particles.array[index].x > pJS.canvas.el.width*0.25 && pJS.particles.array[index].x < pJS.canvas.el.width*0.75
+        && pJS.particles.array[index].y > pJS.canvas.el.height*0.25 && pJS.particles.array[index].y < pJS.canvas.el.height*0.75) {
+        pJS.particles.array[index].shape = 'edge';
+        pJS.particles.array[index].radius = pJS.particles.size.value;
+      }
+    }  
+
+
+  };
 
 
   /* ---------- pJS functions - vendors ------------ */
@@ -1164,7 +1317,6 @@ var pJS = function(tag_id, params){
   pJS.fn.vendors.densityAutoParticles = function(){
 
     if(pJS.particles.number.density.enable){
-
       /* calc area */
       var area = pJS.canvas.el.width * pJS.canvas.el.height / 1000;
       if(pJS.tmp.retina){
@@ -1377,6 +1529,7 @@ var pJS = function(tag_id, params){
     pJS.fn.canvasInit();
     pJS.fn.canvasSize();
     pJS.fn.canvasPaint();
+    pJS.fn.particlesEmpty();
     pJS.fn.particlesCreate();
     pJS.fn.vendors.densityAutoParticles();
 
@@ -1397,17 +1550,11 @@ var pJS = function(tag_id, params){
 
   };
 
-
-
-
   /* ---------- pJS - start ------------ */
-
 
   pJS.fn.vendors.eventsListeners();
 
   pJS.fn.vendors.start();
-  
-
 
 };
 
@@ -1539,3 +1686,14 @@ window.particlesJS.load = function(tag_id, path_config_json, callback){
   xhr.send();
 
 };
+
+window.particlesJS.animateBS = function(){
+  var handle = 0;
+  renderLoop();  // call animation frame to start
+
+  function renderLoop() {
+    window.pJSDom[0].pJS.fn.modes.flipNodes(2);
+    handle = setTimeout(renderLoop, 50);
+
+  }
+}
