@@ -374,10 +374,8 @@ var pJS = function(tag_id, params){
       if(this.x > pJS.canvas.el.width*0.45 && this.x < pJS.canvas.el.width*0.90 && this.y < pJS.canvas.el.height * 0.3 ||
          this.x > pJS.canvas.el.width*0.25 && this.x < pJS.canvas.el.width*0.75 && this.y > pJS.canvas.el.height * 0.3 && this.y < pJS.canvas.el.height * 0.6 ||
          this.x > pJS.canvas.el.width*0.15 && this.x < pJS.canvas.el.width*0.60 && this.y > pJS.canvas.el.height * 0.6) {
-        if(Math.random()<0.5){
+        if(Math.random()<0.55){
             this.shape = 'circle';
-
-            this.color.rgb = {r: 255, g: 255, b:255};
         } else {
             this.shape = shape_type;
         }
@@ -400,6 +398,8 @@ var pJS = function(tag_id, params){
         }
       }
     }
+
+    this.links=[]; // keep track of neighbors linked to avoid disconnected nodes
   };
 
 
@@ -507,9 +507,8 @@ var pJS = function(tag_id, params){
 
   pJS.fn.particlesCreate = function(){
     var w = pJS.particles.size.value*5;
-    var nx = Math.floor(pJS.canvas.el.width/w);
-    var ny = Math.floor(pJS.canvas.el.height/w);
-    var masternodes = 0;
+    var nx = Math.floor(pJS.canvas.w/w);
+    var ny = Math.floor(pJS.canvas.h/w);
     for(var j = 0; j < ny; j++) {
       for(var i = 0; i < nx; i++) {
         var p = new pJS.fn.particle(pJS.particles.color, pJS.particles.opacity.value, {'x':i*w*2+w/2,'y':j*w*2+w/2})
@@ -626,9 +625,9 @@ var pJS = function(tag_id, params){
       /* interaction auto between particles */
       if(pJS.particles.line_linked.enable || pJS.particles.move.attract.enable){
 
-        var nx = Math.floor(pJS.canvas.el.width/(pJS.particles.size.value*5));
+        var nx = Math.floor(pJS.canvas.w/(pJS.particles.size.value*5));
 
-        if(pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)].shape == 'circle'){
+        if(pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)] && pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)].shape == 'circle'){
          pJS.fn.interact.linkParticles(p,pJS.particles.matrix[(i%nx)+1][Math.floor(i/nx)]); 
         }
 
@@ -719,7 +718,9 @@ var pJS = function(tag_id, params){
           ! (pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)].shape == 'circle' && 
              pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)+1].shape == 'circle') &&
           ! (pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)]   && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)].shape == 'circle' && 
-             pJS.particles.matrix[(i%nx)-2][Math.floor(i/nx)+2] && pJS.particles.matrix[(i%nx)-2][Math.floor(i/nx)+2].shape == 'circle') 
+             pJS.particles.matrix[(i%nx)-2][Math.floor(i/nx)+2] && pJS.particles.matrix[(i%nx)-2][Math.floor(i/nx)+2].shape == 'circle') &&
+          ! (pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1] && pJS.particles.matrix[(i%nx)-1][Math.floor(i/nx)+1].shape == 'circle' && 
+             pJS.particles.matrix[(i%nx)][Math.floor(i/nx)-1]   && pJS.particles.matrix[(i%nx)][Math.floor(i/nx)-1].shape == 'circle')    
           ){
          pJS.fn.interact.linkParticles(p,pJS.particles.matrix[(i%nx)-2][Math.floor(i/nx)+1]); 
         }
@@ -805,7 +806,7 @@ var pJS = function(tag_id, params){
         dist = Math.sqrt(dx*dx + dy*dy);
 
     /* draw a line between p1 and p2 if the distance between them is under the config distance */
-    if(dist <= pJS.particles.line_linked.distance && p1.y>50 &&p2.y>50){
+    if(dist <= pJS.particles.line_linked.distance){
 
       var opacity_line = pJS.particles.line_linked.opacity //- (dist / (1/pJS.particles.line_linked.opacity)) / pJS.particles.line_linked.distance;
 
@@ -829,6 +830,13 @@ var pJS = function(tag_id, params){
         pJS.canvas.ctx.lineTo(x2, y2);
         pJS.canvas.ctx.stroke();
         pJS.canvas.ctx.closePath();
+		
+        if ( p1.links.indexOf( pJS.particles.array.indexOf(p2) ) == -1) {
+          p1.links.push( pJS.particles.array.indexOf(p2) );
+        }
+        if ( p2.links.indexOf( pJS.particles.array.indexOf(p1) ) == -1) {
+          p2.links.push( pJS.particles.array.indexOf(p1) );
+        }
 
       }
 
@@ -1189,24 +1197,34 @@ var pJS = function(tag_id, params){
   pJS.fn.modes.flipNodes = function(nb, pos){
 
     for(var i = 0; i < nb; i++){
-      index = Math.floor(Math.random() * pJS.particles.array.length)
+      index = Math.floor(Math.random() * pJS.particles.array.length);
 
-      if(pJS.particles.array[index].x > pJS.canvas.el.width*0.45 && pJS.particles.array[index].x < pJS.canvas.el.width*0.90 && pJS.particles.array[index].y < pJS.canvas.el.height * 0.3 ||
-         pJS.particles.array[index].x > pJS.canvas.el.width*0.25 && pJS.particles.array[index].x < pJS.canvas.el.width*0.75 && pJS.particles.array[index].y > pJS.canvas.el.height * 0.3 && pJS.particles.array[index].y < pJS.canvas.el.height * 0.6 ||
-         pJS.particles.array[index].x > pJS.canvas.el.width*0.15 && pJS.particles.array[index].x < pJS.canvas.el.width*0.60 && pJS.particles.array[index].y > pJS.canvas.el.height * 0.6) {
+      if(pJS.particles.array[index].x > pJS.canvas.w*0.45 && pJS.particles.array[index].x < pJS.canvas.w*0.90 && pJS.particles.array[index].y < pJS.canvas.h * 0.3 ||
+         pJS.particles.array[index].x > pJS.canvas.w*0.25 && pJS.particles.array[index].x < pJS.canvas.w*0.75 && pJS.particles.array[index].y > pJS.canvas.h * 0.3 && pJS.particles.array[index].y < pJS.canvas.el.height * 0.6 ||
+         pJS.particles.array[index].x > pJS.canvas.w*0.15 && pJS.particles.array[index].x < pJS.canvas.w*0.60 && pJS.particles.array[index].y > pJS.canvas.h * 0.6 && pJS.particles.array[index].y < pJS.canvas.h ) {
         pJS.particles.array[index].shape = 'circle';
       }
 
-      index = Math.floor(Math.random() * pJS.particles.array.length)
+      index = Math.floor(Math.random() * pJS.particles.array.length);
 
       if(pJS.particles.array[index].x > pJS.canvas.el.width*0.25 && pJS.particles.array[index].x < pJS.canvas.el.width*0.75
         && pJS.particles.array[index].y > pJS.canvas.el.height*0.25 && pJS.particles.array[index].y < pJS.canvas.el.height*0.75) {
-        pJS.particles.array[index].shape = 'edge';
-        pJS.particles.array[index].radius = pJS.particles.size.value;
+
+      	var removable = 1;
+      	pJS.particles.array[index].links.forEach(function(neighbor){
+      		if(pJS.particles.array[neighbor].links && pJS.particles.array[neighbor].links.length == 1 ) {removable = 0; }
+      	});
+
+      	if(removable) {
+	      pJS.particles.array[index].shape = 'edge';
+          pJS.particles.array[index].radius = pJS.particles.size.value;
+          pJS.particles.array[index].links.forEach(function(neighbor){
+          	pJS.particles.array[neighbor].links.splice(pJS.particles.array[neighbor].links.indexOf(index),1);
+          });
+          pJS.particles.array[index].links = [];
+        } 
       }
     }  
-
-
   };
 
 
@@ -1692,8 +1710,7 @@ window.particlesJS.animateBS = function(){
   renderLoop();  // call animation frame to start
 
   function renderLoop() {
-    window.pJSDom[0].pJS.fn.modes.flipNodes(2);
-    handle = setTimeout(renderLoop, 50);
-
+    window.pJSDom[0].pJS.fn.modes.flipNodes(2);	// flip 2*2 nodes
+    handle = setTimeout(renderLoop, 50);		// every 50ms
   }
 }
